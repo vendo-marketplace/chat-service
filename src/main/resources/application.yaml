@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: chat-service
+  profiles:
+    active: ${APP_PROFILE}
+  config:
+    import: "optional:configserver:${CONFIG_SERVER_URL}"
