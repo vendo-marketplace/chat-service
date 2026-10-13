@@ -14,4 +14,9 @@ public record Conversation(
         Instant createdAt
 
 ) {
+
+    public static Conversation from(String productId, String sellerId, String buyerId, String lastMessage) {
+        return new Conversation(null, productId, sellerId, buyerId, lastMessage, null);
+    }
+
 }

@@ -4,12 +4,14 @@ import lombok.Data;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
 
 @Data
 @Document
+@CompoundIndex(name = "unique_conversation_idx", def = "{'productId': 1, 'sellerId': 1, 'buyerId': 1}")
 public class MongoConversation {
 
     @Id
