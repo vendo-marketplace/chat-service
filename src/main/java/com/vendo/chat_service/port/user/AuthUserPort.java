@@ -6,4 +6,6 @@ public interface AuthUserPort {
 
     User getAuthUser();
 
+    User validateAnyOwner(String... ownerId);
+
 }

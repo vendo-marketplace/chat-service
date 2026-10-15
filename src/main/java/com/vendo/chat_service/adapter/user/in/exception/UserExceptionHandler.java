@@ -1,6 +1,7 @@
 package com.vendo.chat_service.adapter.user.in.exception;
 
 import com.vendo.chat_service.domain.user.exception.SameUserConversationException;
+import com.vendo.chat_service.domain.user.exception.UserNotOwnerException;
 import com.vendo.security_lib.exception.ExceptionResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,17 @@ public class UserExceptionHandler {
                 .build();
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(exceptionResponse);
+    }
+
+    @ExceptionHandler(UserNotOwnerException.class)
+    public ResponseEntity<ExceptionResponse> handleUserNotOwnerException(UserNotOwnerException e, HttpServletRequest request) {
+        ExceptionResponse exceptionResponse = ExceptionResponse.builder()
+                .message(e.getMessage())
+                .code(HttpStatus.FORBIDDEN.value())
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(exceptionResponse);
     }
 
 }

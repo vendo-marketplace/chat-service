@@ -1,9 +1,9 @@
 package com.vendo.chat_service.infrastructure;
 
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.mongodb.config.EnableMongoAuditing;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 @Configuration
-@EnableMongoAuditing
-public class MongoAuditingConfig {
+@EnableJpaAuditing
+public class JpaAuditingConfig {
 }

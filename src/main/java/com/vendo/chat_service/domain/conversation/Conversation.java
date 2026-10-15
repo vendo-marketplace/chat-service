@@ -1,7 +1,10 @@
 package com.vendo.chat_service.domain.conversation;
 
+import lombok.Builder;
+
 import java.time.Instant;
 
+@Builder
 public record Conversation(
 
         String id,
@@ -9,6 +12,7 @@ public record Conversation(
         String productId,
         String sellerId,
         String buyerId,
+
         String lastMessage,
 
         Instant createdAt

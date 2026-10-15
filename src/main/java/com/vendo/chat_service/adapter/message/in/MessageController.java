@@ -1,31 +1,35 @@
 package com.vendo.chat_service.adapter.message.in;
 
-import com.vendo.chat_service.adapter.message.in.dto.MessageResponse;
 import com.vendo.chat_service.adapter.message.in.dto.SendMessageRequest;
+import com.vendo.chat_service.domain.message.Message;
+import com.vendo.chat_service.port.message.MessageUseCase;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/conversations/{conversationId}/messages")
+@RequiredArgsConstructor
 public class MessageController {
 
+    private final MessageUseCase useCase;
+
     @PostMapping
-    public MessageResponse send(
+    public void send(
             @PathVariable String conversationId,
             @Valid @RequestBody SendMessageRequest request
     ) {
-        // Надіслати повідомлення в розмову.
-        return null;
+        useCase.send(conversationId, request.message());
     }
 
     @GetMapping
-    public Page<MessageResponse> findAll(
+    public Page<Message> findAll(
             @PathVariable String conversationId,
-            Pageable pageable
+            @PageableDefault(size = 100) Pageable pageable
     ) {
-        // Отримати історію повідомлень.
-        return Page.empty();
+        return useCase.findAll(conversationId, pageable);
     }
 }
