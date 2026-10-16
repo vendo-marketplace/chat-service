@@ -1,5 +1,6 @@
 package com.vendo.chat_service.adapter.conversation.exception;
 
+import com.vendo.chat_service.domain.conversation.exception.ConversationNotAllowedException;
 import com.vendo.chat_service.domain.conversation.exception.ConversationNotFoundException;
 import com.vendo.security_lib.exception.ExceptionResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,6 +21,17 @@ public class ConversationExceptionHandler {
                 .build();
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(exceptionResponse);
+    }
+
+    @ExceptionHandler(ConversationNotAllowedException.class)
+    public ResponseEntity<ExceptionResponse> handleConversationNotAllowedException(ConversationNotAllowedException e, HttpServletRequest request) {
+        ExceptionResponse exceptionResponse = ExceptionResponse.builder()
+                .message(e.getMessage())
+                .code(HttpStatus.FORBIDDEN.value())
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(exceptionResponse);
     }
 
 }
