@@ -18,12 +18,13 @@ public class JpaMessageCommandAdapter implements MessageCommandPort {
     private final JpaConversationRepository conversationRepository;
 
     @Override
-    public void save(Message message) {
+    public Message save(Message message) {
         JpaMessage entity = mapper.toEntity(message);
         JpaConversation conversation = conversationRepository.findById(message.conversationId())
                 .orElseThrow(() -> new ConversationNotFoundException("Conversation not found."));
+
         entity.setConversation(conversation);
-        repository.save(entity);
+        return mapper.toMessage(repository.save(entity));
     }
 
     @Override

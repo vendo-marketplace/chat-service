@@ -4,7 +4,7 @@ import com.vendo.chat_service.domain.message.Message;
 
 public interface MessageCommandPort {
 
-    void save(Message message);
+    Message save(Message message);
 
     void deleteAll(String conversationId);
 
