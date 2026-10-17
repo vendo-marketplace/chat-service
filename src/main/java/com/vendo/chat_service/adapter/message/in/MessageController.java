@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,7 +29,7 @@ public class MessageController {
     @GetMapping
     public Page<Message> findAll(
             @PathVariable String conversationId,
-            @PageableDefault(size = 100) Pageable pageable
+            @PageableDefault(sort = "createdAt", direction = Sort.Direction.DESC, size = 30) Pageable pageable
     ) {
         return useCase.findAll(conversationId, pageable);
     }
