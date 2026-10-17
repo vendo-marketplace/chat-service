@@ -17,6 +17,10 @@ public class ChatAntPathResolver implements AntPathResolver {
 
     @Override
     public boolean isPermittedPath(String path) {
+        System.out.println(path);
+        System.out.println(Arrays.stream(props.allPaths())
+                .anyMatch(pr -> antPathMatcher.match(pr, path)));
+        System.out.println("------------------");
         return Arrays.stream(props.allPaths())
                 .anyMatch(pr -> antPathMatcher.match(pr, path));
     }
