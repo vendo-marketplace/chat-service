@@ -5,3 +5,8 @@ spring:
     active: ${APP_PROFILE}
   config:
     import: "optional:configserver:${CONFIG_SERVER_URL}"
+
+logging:
+  level:
+    org.springframework.web.socket: TRACE
+    org.springframework.security: DEBUG
