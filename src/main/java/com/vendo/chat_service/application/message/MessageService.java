@@ -40,6 +40,7 @@ public class MessageService implements MessageUseCase {
         eventPublisher.publishEvent(new MessageCreatedEvent(
                 message.id(),
                 conversationId,
+                user.id(),
                 message.content(),
                 message.createdAt()
         ));
