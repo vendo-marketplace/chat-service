@@ -36,6 +36,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+        System.out.println(localOrigin);
+        System.out.println(prodOrigin);
         registry
                 .addEndpoint("/ws")
                 .setAllowedOriginPatterns(localOrigin, prodOrigin);
