@@ -1,6 +1,7 @@
 package com.vendo.chat_service.infrastructure;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -13,6 +14,12 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 @RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    @Value("${client.local.url}")
+    private String localOrigin;
+
+    @Value("${client.prod.url}")
+    private String prodOrigin;
 
     private final ChannelInterceptor channelInterceptor;
 
@@ -29,6 +36,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws");
+        registry
+                .addEndpoint("/ws")
+                .setAllowedOriginPatterns(localOrigin, prodOrigin);
     }
 }
