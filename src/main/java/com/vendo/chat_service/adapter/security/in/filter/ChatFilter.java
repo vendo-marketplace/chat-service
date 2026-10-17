@@ -71,6 +71,9 @@ public class ChatFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
+        System.out.println("Origin " + request.getHeader("Origin"));
+        System.out.println("Upgrade " + request.getHeader("Upgrade"));
+        System.out.println("Connection " + request.getHeader("Connection"));
         String requestURI = request.getRequestURI();
         return chatAntPathResolver.isPermittedPath(requestURI);
     }
