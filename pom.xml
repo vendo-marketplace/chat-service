@@ -122,7 +122,7 @@
 		<dependency>
 			<groupId>io.github.vendo-marketplace-be</groupId>
 			<artifactId>core-lib</artifactId>
-			<version>5.14.2</version>
+			<version>5.15.2</version>
 		</dependency>
 		<dependency>
 			<groupId>io.github.vendo-marketplace-be</groupId>

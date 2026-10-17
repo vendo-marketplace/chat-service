@@ -23,8 +23,7 @@ public class InternalTokenGenerationAdapter implements InternalTokenGenerationPo
         JwtProperties.Internal internal = props.getInternal();
 
         JwtPayload jwtPayload = JwtPayload.builder()
-                // TODO
-//                .subject(ServiceName.CHAT_SERVICE.getServiceName())
+                .subject(ServiceName.CHAT_SERVICE.getServiceName())
                 .audience(Set.of(audience.getServiceName()))
                 .claims(Map.of(TokenClaim.ROLES.getClaim(), ServiceRole.INTERNAL.name()))
                 .expiration(internal.expirationTime())
