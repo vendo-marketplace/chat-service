@@ -32,13 +32,16 @@ public class MessageChannelInterceptor implements ChannelInterceptor {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
         StompCommand command = accessor.getCommand();
 
+        System.out.println("command type " + command.getMessageType());
         if (ObjectUtils.isNotNull(command) && command.getMessageType() == SimpMessageType.SUBSCRIBE) {
             String destination = validateDestination(accessor);
             String conversationId = destination.substring(conversationPath.length());
+            System.out.println("conversationId " + conversationId);
 
             Conversation conversation = conversationQueryPort.findById(conversationId);
 
             User user = parseAuthUser(accessor);
+            System.out.println("user " + user);
             if (!isParticipant(user, conversation)) {
                 throw new ConversationNotAllowedException("Subscription denied");
             }
