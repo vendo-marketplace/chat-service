@@ -34,11 +34,6 @@ public class MessageChannelInterceptor implements ChannelInterceptor {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
         StompCommand command = accessor.getCommand();
 
-        log.info("STOMP command={}, destination={}, userPresent={}",
-                accessor.getCommand(),
-                accessor.getDestination(),
-                accessor.getUser() != null);
-
         if (ObjectUtils.isNotNull(command) && command.getMessageType() == SimpMessageType.SUBSCRIBE) {
             String destination = validateDestination(accessor);
             String conversationId = destination.substring(conversationPath.length());

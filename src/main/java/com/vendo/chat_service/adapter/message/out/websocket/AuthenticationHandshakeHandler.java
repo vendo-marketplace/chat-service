@@ -16,7 +16,7 @@ import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
-public class AuthenticationHandshakeHandler extends DefaultHandshakeHandler {
+class AuthenticationHandshakeHandler extends DefaultHandshakeHandler {
 
     private final AuthUserPort authUserPort;
 
