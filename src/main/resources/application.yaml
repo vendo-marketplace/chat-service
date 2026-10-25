@@ -5,9 +5,3 @@ spring:
     active: ${APP_PROFILE}
   config:
     import: "optional:configserver:${CONFIG_SERVER_URL}"
-
-
-logging:
-  level:
-    org.springframework.security.messaging.web.socket: DEBUG
-    org.springframework.web.socket.server: DEBUG
