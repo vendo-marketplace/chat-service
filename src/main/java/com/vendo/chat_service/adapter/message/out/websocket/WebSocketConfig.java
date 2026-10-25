@@ -1,4 +1,4 @@
-package com.vendo.chat_service.infrastructure;
+package com.vendo.chat_service.adapter.message.out.websocket;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,6 +9,7 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.web.socket.server.support.DefaultHandshakeHandler;
 
 @Configuration
 @EnableWebSocketMessageBroker
@@ -22,6 +23,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     private String prodOrigin;
 
     private final ChannelInterceptor channelInterceptor;
+    private final DefaultHandshakeHandler handshakeHandler;
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
@@ -38,6 +40,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry
                 .addEndpoint("/ws")
+                .setHandshakeHandler(handshakeHandler)
                 .setAllowedOrigins(localOrigin, prodOrigin);
     }
 }
