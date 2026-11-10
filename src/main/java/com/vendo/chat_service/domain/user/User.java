@@ -12,6 +12,7 @@ public record User(
         String id,
         String email,
         UserStatus status,
+        String fullName,
         Set<UserRole> roles,
         boolean emailVerified
 ) {

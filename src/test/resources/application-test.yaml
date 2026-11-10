@@ -1,0 +1,43 @@
+spring:
+  cloud:
+    config:
+      enabled: false
+    discovery:
+      enabled: false
+  datasource:
+    url: jdbc:postgresql://localhost:5432/chat_test
+    username: test
+    password: test
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        boot:
+          allow_jdbc_metadata_access: false
+
+eureka:
+  client:
+    enabled: false
+
+security:
+  jwt:
+    internal:
+      key: 8539cf66b1790c36a20d79678f492666d1a62f80b6aaf56e21c9408eda55fd25879efe9ea032679b07456694a99d36cd
+      expiration-time: 60000
+
+websocket:
+  conversation:
+    path: /topic/conversations/
+
+client:
+  local:
+    url: http://localhost:3000
+  prod:
+    url: http://localhost:3001
+
+endpoints:
+  unauthenticated:
+    general:
+      - /actuator/health

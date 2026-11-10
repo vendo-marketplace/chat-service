@@ -4,6 +4,9 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@EnableFeignClients(basePackages = "com.vendo.chat_service.adapter.product.out")
+@EnableFeignClients(basePackages = {
+        "com.vendo.chat_service.adapter.product.out",
+        "com.vendo.chat_service.adapter.user.out"
+})
 public class OpenFeignConfig {
 }

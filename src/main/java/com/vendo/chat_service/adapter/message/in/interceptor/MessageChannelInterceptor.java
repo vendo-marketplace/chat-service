@@ -6,7 +6,6 @@ import com.vendo.chat_service.domain.user.User;
 import com.vendo.chat_service.port.conversation.ConversationQueryPort;
 import com.vendo.core_lib.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,7 +18,6 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class MessageChannelInterceptor implements ChannelInterceptor {

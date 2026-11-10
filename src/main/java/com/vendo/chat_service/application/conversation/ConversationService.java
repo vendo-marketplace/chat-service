@@ -1,5 +1,7 @@
 package com.vendo.chat_service.application.conversation;
 
+import com.vendo.chat_service.adapter.conversation.in.dto.ConversationResponse;
+import com.vendo.chat_service.adapter.user.in.dto.UserProfileResponse;
 import com.vendo.chat_service.application.conversation.command.ConversationCreatedCommand;
 import com.vendo.chat_service.domain.conversation.Conversation;
 import com.vendo.chat_service.domain.message.Message;
@@ -13,11 +15,14 @@ import com.vendo.chat_service.port.conversation.ConversationUseCase;
 import com.vendo.chat_service.port.message.MessageCommandPort;
 import com.vendo.chat_service.port.product.ProductQueryPort;
 import com.vendo.chat_service.port.user.AuthUserPort;
+import com.vendo.chat_service.port.user.UserQueryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -25,6 +30,7 @@ import java.util.Optional;
 public class ConversationService implements ConversationUseCase {
 
     private final AuthUserPort authUserPort;
+    private final UserQueryPort userQueryPort;
 
     private final ProductQueryPort productQueryPort;
 
@@ -47,14 +53,21 @@ public class ConversationService implements ConversationUseCase {
     }
 
     @Override
-    public List<Conversation> findAll() {
+    public List<ConversationResponse> findAll() {
         User authUser = authUserPort.getAuthUser();
-        return conversationQueryPort.findAll(authUser.id());
+        List<Conversation> conversations = conversationQueryPort.findAll(authUser.id());
+        Map<String, UserProfileResponse> profiles = new HashMap<>();
+
+        return conversations.stream()
+                .map(conversation -> toConversationResponse(conversation, profiles))
+                .toList();
     }
 
     @Override
-    public Conversation findById(String conversationId) {
-        return validateConversationOwner(conversationId);
+    public ConversationResponse findById(String conversationId) {
+        var conversation = conversationQueryPort.findById(conversationId);
+        authUserPort.validateAnyOwner(conversation.buyerId(), conversation.sellerId());
+        return toConversationResponse(conversation, new HashMap<>());
     }
 
     @Override
@@ -65,10 +78,31 @@ public class ConversationService implements ConversationUseCase {
         conversationCommandPort.delete(conversationId);
     }
 
-    private Conversation validateConversationOwner(String conversationId) {
+    private ConversationResponse toConversationResponse(Conversation conversation, Map<String, UserProfileResponse> profiles) {
+        return ConversationResponse.builder()
+                .id(conversation.id())
+                .productId(conversation.productId())
+                .seller(getUserProfile(conversation.sellerId(), profiles))
+                .buyer(getUserProfile(conversation.buyerId(), profiles))
+                .lastMessage(conversation.lastMessage())
+                .createdAt(conversation.createdAt())
+                .build();
+    }
+
+    private UserProfileResponse getUserProfile(String userId, Map<String, UserProfileResponse> profiles) {
+        return profiles.computeIfAbsent(userId, id -> toUserProfile(userQueryPort.getById(id)));
+    }
+
+    private UserProfileResponse toUserProfile(User user) {
+        return UserProfileResponse.builder()
+                .id(user.id())
+                .fullName(user.fullName())
+                .build();
+    }
+
+    private void validateConversationOwner(String conversationId) {
         var conversation = conversationQueryPort.findById(conversationId);
         authUserPort.validateAnyOwner(conversation.buyerId(), conversation.sellerId());
-        return conversation;
     }
 
     private void validateNotConversationProductOwner(User owner, Product product) {

@@ -1,6 +1,8 @@
 package com.vendo.chat_service.adapter.user.in.exception;
 
 import com.vendo.chat_service.adapter.user.out.exception.UserServiceUnavailableException;
+import com.vendo.chat_service.domain.user.exception.SameUserConversationException;
+import com.vendo.chat_service.domain.user.exception.UserNotOwnerException;
 import com.vendo.security_lib.exception.ExceptionResponse;
 import com.vendo.user_lib.exception.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -33,6 +35,26 @@ public class UserExceptionHandler {
                 .path(request.getRequestURI())
                 .build();
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(exceptionResponse);
+    }
+
+    @ExceptionHandler(UserNotOwnerException.class)
+    public ResponseEntity<ExceptionResponse> handleUserNotOwnerException(UserNotOwnerException e, HttpServletRequest request) {
+        ExceptionResponse exceptionResponse = ExceptionResponse.builder()
+                .message(e.getMessage())
+                .code(HttpStatus.FORBIDDEN.value())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(exceptionResponse);
+    }
+
+    @ExceptionHandler(SameUserConversationException.class)
+    public ResponseEntity<ExceptionResponse> handleSameUserConversationException(SameUserConversationException e, HttpServletRequest request) {
+        ExceptionResponse exceptionResponse = ExceptionResponse.builder()
+                .message(e.getMessage())
+                .code(HttpStatus.BAD_REQUEST.value())
+                .path(request.getRequestURI())
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(exceptionResponse);
     }
 
 }
