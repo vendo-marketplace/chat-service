@@ -7,7 +7,7 @@ import org.springframework.data.repository.ListPagingAndSortingRepository;
 
 public interface JpaMessageRepository extends ListPagingAndSortingRepository<JpaMessage, String>, CrudRepository<JpaMessage, String> {
 
-    Page<JpaMessage> findAllByConversation_IdOrderByCreatedAtAsc(String conversationId, Pageable pageable);
+    Page<JpaMessage> findAllByConversation_Id(String conversationId, Pageable pageable);
 
     void deleteAllByConversation_Id(String conversationId);
 }

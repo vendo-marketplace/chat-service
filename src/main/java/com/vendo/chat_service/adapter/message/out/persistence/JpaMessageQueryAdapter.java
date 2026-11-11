@@ -17,7 +17,7 @@ public class JpaMessageQueryAdapter implements MessageQueryPort {
 
     @Override
     public Page<Message> findAll(String conversationId, Pageable pageable) {
-        Page<JpaMessage> entities = repository.findAllByConversation_IdOrderByCreatedAtAsc(conversationId, pageable);
+        Page<JpaMessage> entities = repository.findAllByConversation_Id(conversationId, pageable);
         return mapper.toPageMessages(entities);
     }
     
