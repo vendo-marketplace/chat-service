@@ -4,7 +4,10 @@ import com.vendo.chat_service.adapter.conversation.in.dto.ConversationResponse;
 import com.vendo.chat_service.adapter.user.in.dto.UserProfileResponse;
 import com.vendo.chat_service.application.conversation.command.ConversationCreatedCommand;
 import com.vendo.chat_service.domain.conversation.Conversation;
+import com.vendo.chat_service.domain.conversation.ReadState;
+import com.vendo.chat_service.domain.conversation.event.MessagesReadEvent;
 import com.vendo.chat_service.domain.message.Message;
+import com.vendo.chat_service.domain.message.exception.MessageNotFoundException;
 import com.vendo.chat_service.domain.product.Product;
 import com.vendo.chat_service.domain.product.exception.ProductOwnerException;
 import com.vendo.chat_service.domain.user.User;
@@ -13,14 +16,20 @@ import com.vendo.chat_service.port.conversation.ConversationCommandPort;
 import com.vendo.chat_service.port.conversation.ConversationQueryPort;
 import com.vendo.chat_service.port.conversation.ConversationUseCase;
 import com.vendo.chat_service.port.message.MessageCommandPort;
+import com.vendo.chat_service.port.message.MessageQueryPort;
 import com.vendo.chat_service.port.product.ProductQueryPort;
 import com.vendo.chat_service.port.user.AuthUserPort;
 import com.vendo.chat_service.port.user.UserQueryPort;
+import com.vendo.core_lib.utils.ObjectUtils;
+import com.vendo.core_lib.utils.StringUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,6 +47,9 @@ public class ConversationService implements ConversationUseCase {
     private final ConversationCommandPort conversationCommandPort;
 
     private final MessageCommandPort messageCommandPort;
+    private final MessageQueryPort messageQueryPort;
+
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -78,6 +90,59 @@ public class ConversationService implements ConversationUseCase {
         conversationCommandPort.delete(conversationId);
     }
 
+    @Override
+    @Transactional
+    public void markAsRead(String conversationId, String lastReadMessageId) {
+        var conversation = conversationQueryPort.findById(conversationId);
+        User reader = authUserPort.validateAnyOwner(conversation.buyerId(), conversation.sellerId());
+        Message message = findConversationMessage(conversationId, lastReadMessageId);
+
+        if (!isNewerThanCurrentReadState(message, conversation.readStateOf(reader.id()))) {
+            return;
+        }
+
+        ReadState readState = new ReadState(message.id(), Instant.now());
+        conversationCommandPort.update(conversationId, conversation.readStateUpdate(reader.id(), readState));
+        eventPublisher.publishEvent(MessagesReadEvent.of(conversationId, reader.id(), message.id(), readState.lastReadAt()));
+    }
+
+    private Message findConversationMessage(String conversationId, String messageId) {
+        Message message = messageQueryPort.findById(messageId);
+
+        if (!conversationId.equals(message.conversationId())) {
+            throw new MessageNotFoundException("Message not found.");
+        }
+
+        return message;
+    }
+
+    private boolean isNewerThanCurrentReadState(Message message, ReadState current) {
+        if (ObjectUtils.isNull(current) || StringUtils.isEmpty(current.lastReadMessageId())) {
+            return true;
+        }
+
+        if (current.lastReadMessageId().equals(message.id())) {
+            return false;
+        }
+
+        Message currentLastRead = messageQueryPort.findById(current.lastReadMessageId());
+        return message.createdAt().isAfter(currentLastRead.createdAt());
+    }
+
+    private Map<String, ReadState> toReadStates(Conversation conversation) {
+        Map<String, ReadState> readStates = new LinkedHashMap<>();
+
+        if (ObjectUtils.isNotNull(conversation.sellerReadState())) {
+            readStates.put(conversation.sellerId(), conversation.sellerReadState());
+        }
+
+        if (ObjectUtils.isNotNull(conversation.buyerReadState())) {
+            readStates.put(conversation.buyerId(), conversation.buyerReadState());
+        }
+
+        return readStates;
+    }
+
     private ConversationResponse toConversationResponse(Conversation conversation, Map<String, UserProfileResponse> profiles) {
         return ConversationResponse.builder()
                 .id(conversation.id())
@@ -85,6 +150,7 @@ public class ConversationService implements ConversationUseCase {
                 .seller(getUserProfile(conversation.sellerId(), profiles))
                 .buyer(getUserProfile(conversation.buyerId(), profiles))
                 .lastMessage(conversation.lastMessage())
+                .readStates(toReadStates(conversation))
                 .createdAt(conversation.createdAt())
                 .build();
     }

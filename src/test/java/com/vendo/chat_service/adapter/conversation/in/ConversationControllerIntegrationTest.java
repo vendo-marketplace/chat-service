@@ -3,18 +3,26 @@ package com.vendo.chat_service.adapter.conversation.in;
 import com.vendo.chat_service.adapter.product.out.exception.ProductServiceUnavailableException;
 import com.vendo.chat_service.adapter.user.out.exception.UserServiceUnavailableException;
 import com.vendo.chat_service.domain.conversation.Conversation;
+import com.vendo.chat_service.domain.conversation.ReadState;
+import com.vendo.chat_service.domain.conversation.event.MessagesReadEvent;
 import com.vendo.chat_service.domain.conversation.exception.ConversationNotFoundException;
 import com.vendo.chat_service.domain.message.Message;
+import com.vendo.chat_service.domain.message.exception.MessageNotFoundException;
 import com.vendo.chat_service.domain.product.Product;
 import com.vendo.chat_service.domain.product.exception.ProductNotFoundException;
+import com.vendo.chat_service.domain.user.User;
 import com.vendo.chat_service.test_utils.AbstractIntegrationTest;
 import com.vendo.user_lib.exception.UserNotFoundException;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.test.web.servlet.ResultActions;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -23,21 +31,28 @@ import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@RecordApplicationEvents
 class ConversationControllerIntegrationTest extends AbstractIntegrationTest {
 
     private static final String PRODUCT_ID = "product-id";
+
+    @Autowired
+    private ApplicationEvents applicationEvents;
 
     @Nested
     class Create {
@@ -325,6 +340,27 @@ class ConversationControllerIntegrationTest extends AbstractIntegrationTest {
         }
 
         @Test
+        void returnsReadStatesOfParticipants() throws Exception {
+            Instant readAt = Instant.parse("2026-11-11T12:00:00Z");
+            Conversation conversation = Conversation.builder()
+                    .id("c1")
+                    .productId("product-c1")
+                    .sellerId(SELLER.id())
+                    .buyerId(BUYER.id())
+                    .buyerReadState(new ReadState("m10", readAt))
+                    .createdAt(CREATED_AT)
+                    .build();
+            when(conversationQueryPort.findById("c1")).thenReturn(conversation);
+            stubUsers(SELLER, BUYER);
+
+            mockMvc.perform(get("/conversations/{id}", "c1").headers(authHeaders(SELLER)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.readStates['%s'].lastReadMessageId".formatted(BUYER.id())).value("m10"))
+                    .andExpect(jsonPath("$.readStates['%s'].lastReadAt".formatted(BUYER.id())).value(readAt.toString()))
+                    .andExpect(jsonPath("$.readStates['%s']".formatted(SELLER.id())).doesNotExist());
+        }
+
+        @Test
         void returnsNotFoundWhenConversationDoesNotExist() throws Exception {
             stubMissingConversation("missing-id");
 
@@ -355,6 +391,218 @@ class ConversationControllerIntegrationTest extends AbstractIntegrationTest {
                     .andExpect(status().isUnauthorized());
 
             verifyNoInteractions(conversationQueryPort, userClient);
+        }
+
+    }
+
+    @Nested
+    class MarkAsRead {
+
+        private static final Instant LAST_READ_CREATED_AT = CREATED_AT.plusSeconds(10);
+
+        private ResultActions performMarkAsRead(User reader, String conversationId, String body) throws Exception {
+            return mockMvc.perform(patch("/conversations/{id}/read", conversationId)
+                    .headers(authHeaders(reader))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body));
+        }
+
+        private String body(String lastReadMessageId) {
+            return "{\"lastReadMessageId\": \"%s\"}".formatted(lastReadMessageId);
+        }
+
+        private void stubMessage(String id, String conversationId, Instant createdAt) {
+            when(messageQueryPort.findById(id)).thenReturn(new Message(id, conversationId, SELLER.id(), "text " + id, createdAt));
+        }
+
+        private Conversation stubConversationReadByBuyer(String lastReadMessageId) {
+            Conversation conversation = Conversation.builder()
+                    .id("c1")
+                    .productId("product-c1")
+                    .sellerId(SELLER.id())
+                    .buyerId(BUYER.id())
+                    .buyerReadState(new ReadState(lastReadMessageId, Instant.parse("2026-11-11T11:00:00Z")))
+                    .createdAt(CREATED_AT)
+                    .build();
+            when(conversationQueryPort.findById("c1")).thenReturn(conversation);
+            return conversation;
+        }
+
+        private List<MessagesReadEvent> publishedEvents() {
+            return applicationEvents.stream(MessagesReadEvent.class).toList();
+        }
+
+        @Test
+        void storesBuyerReadStateAndPublishesEvent() throws Exception {
+            stubConversation("c1", SELLER, BUYER, "last message");
+            stubMessage("m2", "c1", LAST_READ_CREATED_AT);
+
+            performMarkAsRead(BUYER, "c1", body("m2"))
+                    .andExpect(status().isOk());
+
+            ArgumentCaptor<Conversation> updateCaptor = ArgumentCaptor.forClass(Conversation.class);
+            verify(conversationCommandPort).update(eq("c1"), updateCaptor.capture());
+            Conversation update = updateCaptor.getValue();
+            assertThat(update.buyerReadState()).isNotNull();
+            assertThat(update.buyerReadState().lastReadMessageId()).isEqualTo("m2");
+            assertThat(update.buyerReadState().lastReadAt()).isNotNull();
+            assertThat(update.sellerReadState()).isNull();
+            assertThat(update.lastMessage()).isNull();
+            assertThat(update.sellerId()).isNull();
+            assertThat(update.buyerId()).isNull();
+
+            assertThat(publishedEvents()).singleElement().satisfies(event -> {
+                assertThat(event.type()).isEqualTo("MESSAGES_READ");
+                assertThat(event.conversationId()).isEqualTo("c1");
+                assertThat(event.readerId()).isEqualTo(BUYER.id());
+                assertThat(event.lastReadMessageId()).isEqualTo("m2");
+                assertThat(event.readAt()).isEqualTo(update.buyerReadState().lastReadAt());
+            });
+        }
+
+        @Test
+        void storesSellerReadState() throws Exception {
+            stubConversation("c1", SELLER, BUYER, "last message");
+            stubMessage("m2", "c1", LAST_READ_CREATED_AT);
+
+            performMarkAsRead(SELLER, "c1", body("m2"))
+                    .andExpect(status().isOk());
+
+            ArgumentCaptor<Conversation> updateCaptor = ArgumentCaptor.forClass(Conversation.class);
+            verify(conversationCommandPort).update(eq("c1"), updateCaptor.capture());
+            assertThat(updateCaptor.getValue().sellerReadState().lastReadMessageId()).isEqualTo("m2");
+            assertThat(updateCaptor.getValue().buyerReadState()).isNull();
+            assertThat(publishedEvents()).singleElement()
+                    .extracting(MessagesReadEvent::readerId)
+                    .isEqualTo(SELLER.id());
+        }
+
+        @Test
+        void movesReadPositionForward() throws Exception {
+            stubConversationReadByBuyer("m1");
+            stubMessage("m1", "c1", CREATED_AT);
+            stubMessage("m2", "c1", LAST_READ_CREATED_AT);
+
+            performMarkAsRead(BUYER, "c1", body("m2"))
+                    .andExpect(status().isOk());
+
+            ArgumentCaptor<Conversation> updateCaptor = ArgumentCaptor.forClass(Conversation.class);
+            verify(conversationCommandPort).update(eq("c1"), updateCaptor.capture());
+            assertThat(updateCaptor.getValue().buyerReadState().lastReadMessageId()).isEqualTo("m2");
+            assertThat(publishedEvents()).hasSize(1);
+        }
+
+        @Test
+        void doesNotMoveReadPositionBackward() throws Exception {
+            stubConversationReadByBuyer("m2");
+            stubMessage("m1", "c1", CREATED_AT);
+            stubMessage("m2", "c1", LAST_READ_CREATED_AT);
+
+            performMarkAsRead(BUYER, "c1", body("m1"))
+                    .andExpect(status().isOk());
+
+            verify(conversationCommandPort, never()).update(any(), any());
+            assertThat(publishedEvents()).isEmpty();
+        }
+
+        @Test
+        void ignoresAlreadyReadMessage() throws Exception {
+            stubConversationReadByBuyer("m2");
+            stubMessage("m2", "c1", LAST_READ_CREATED_AT);
+
+            performMarkAsRead(BUYER, "c1", body("m2"))
+                    .andExpect(status().isOk());
+
+            verify(conversationCommandPort, never()).update(any(), any());
+            assertThat(publishedEvents()).isEmpty();
+        }
+
+        @Test
+        void returnsNotFoundWhenMessageBelongsToAnotherConversation() throws Exception {
+            stubConversation("c1", SELLER, BUYER, "last message");
+            stubMessage("foreign", "c2", LAST_READ_CREATED_AT);
+
+            performMarkAsRead(BUYER, "c1", body("foreign"))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message").value("Message not found."))
+                    .andExpect(jsonPath("$.code").value(404))
+                    .andExpect(jsonPath("$.path").value("/conversations/c1/read"));
+
+            verify(conversationCommandPort, never()).update(any(), any());
+            assertThat(publishedEvents()).isEmpty();
+        }
+
+        @Test
+        void returnsNotFoundWhenMessageDoesNotExist() throws Exception {
+            stubConversation("c1", SELLER, BUYER, "last message");
+            when(messageQueryPort.findById("missing")).thenThrow(new MessageNotFoundException("Message not found."));
+
+            performMarkAsRead(BUYER, "c1", body("missing"))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message").value("Message not found."));
+
+            verify(conversationCommandPort, never()).update(any(), any());
+        }
+
+        @Test
+        void returnsNotFoundWhenConversationDoesNotExist() throws Exception {
+            stubMissingConversation("missing-id");
+
+            performMarkAsRead(BUYER, "missing-id", body("m1"))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message").value("Conversation not found."));
+
+            verifyNoInteractions(messageQueryPort, conversationCommandPort);
+        }
+
+        @Test
+        void returnsForbiddenWhenUserIsNotParticipant() throws Exception {
+            stubConversation("c1", SELLER, BUYER, "last message");
+
+            performMarkAsRead(STRANGER, "c1", body("m1"))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.message").value("You're not owner."));
+
+            verifyNoInteractions(messageQueryPort, conversationCommandPort);
+            assertThat(publishedEvents()).isEmpty();
+        }
+
+        @Test
+        void returnsValidationErrorWhenLastReadMessageIdIsBlank() throws Exception {
+            performMarkAsRead(BUYER, "c1", body("  "))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("Validation failed."))
+                    .andExpect(jsonPath("$.errors.lastReadMessageId").value("Last read message ID is required."));
+
+            verifyNoInteractions(conversationQueryPort, messageQueryPort, conversationCommandPort);
+        }
+
+        @Test
+        void returnsValidationErrorWhenLastReadMessageIdIsMissing() throws Exception {
+            performMarkAsRead(BUYER, "c1", "{}")
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.errors.lastReadMessageId").value("Last read message ID is required."));
+
+            verifyNoInteractions(conversationQueryPort, messageQueryPort, conversationCommandPort);
+        }
+
+        @Test
+        void returnsBadRequestWhenBodyIsMalformed() throws Exception {
+            performMarkAsRead(BUYER, "c1", "{not json")
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("Invalid body structure."));
+
+            verifyNoInteractions(conversationQueryPort, messageQueryPort, conversationCommandPort);
+        }
+
+        @Test
+        void returnsUnauthorizedWithoutAuthHeaders() throws Exception {
+            mockMvc.perform(patch("/conversations/{id}/read", "c1")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body("m1")))
+                    .andExpect(status().isUnauthorized());
+
+            verifyNoInteractions(conversationQueryPort, messageQueryPort, conversationCommandPort);
         }
 
     }

@@ -32,6 +32,20 @@ public class JpaConversation {
     @Column(length = 4000)
     private String lastMessage;
 
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "lastReadMessageId", column = @Column(name = "seller_last_read_message_id")),
+            @AttributeOverride(name = "lastReadAt", column = @Column(name = "seller_last_read_at"))
+    })
+    private JpaReadState sellerReadState;
+
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "lastReadMessageId", column = @Column(name = "buyer_last_read_message_id")),
+            @AttributeOverride(name = "lastReadAt", column = @Column(name = "buyer_last_read_at"))
+    })
+    private JpaReadState buyerReadState;
+
     @OneToMany(mappedBy = "conversation", fetch = FetchType.LAZY)
     private List<JpaMessage> messages;
 

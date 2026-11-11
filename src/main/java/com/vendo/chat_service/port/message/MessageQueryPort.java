@@ -7,5 +7,6 @@ import org.springframework.data.domain.Pageable;
 public interface MessageQueryPort {
 
     Page<Message> findAll(String conversationId, Pageable pageable);
+    Message findById(String id);
 
 }

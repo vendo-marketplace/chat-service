@@ -2,6 +2,7 @@ package com.vendo.chat_service.adapter.message.out.persistence;
 
 import com.vendo.chat_service.adapter.message.out.mapper.MessageMapper;
 import com.vendo.chat_service.domain.message.Message;
+import com.vendo.chat_service.domain.message.exception.MessageNotFoundException;
 import com.vendo.chat_service.port.message.MessageQueryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,6 +20,12 @@ public class JpaMessageQueryAdapter implements MessageQueryPort {
     public Page<Message> findAll(String conversationId, Pageable pageable) {
         Page<JpaMessage> entities = repository.findAllByConversation_Id(conversationId, pageable);
         return mapper.toPageMessages(entities);
+    }
+
+    @Override
+    public Message findById(String id) {
+        return repository.findById(id).map(mapper::toMessage)
+                .orElseThrow(() -> new MessageNotFoundException("Message not found."));
     }
     
 }

@@ -3,7 +3,10 @@ package com.vendo.chat_service.adapter.message.in.interceptor;
 import com.vendo.chat_service.domain.conversation.Conversation;
 import com.vendo.chat_service.domain.conversation.exception.ConversationNotAllowedException;
 import com.vendo.chat_service.domain.user.User;
+import com.vendo.chat_service.adapter.message.out.websocket.MessageWebSocketEventListener;
 import com.vendo.chat_service.port.conversation.ConversationQueryPort;
+import com.vendo.core_lib.constants.Delimiters;
+import com.vendo.core_lib.constants.Separators;
 import com.vendo.core_lib.utils.ObjectUtils;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
@@ -34,7 +37,7 @@ public class MessageChannelInterceptor implements ChannelInterceptor {
 
         if (ObjectUtils.isNotNull(command) && command.getMessageType() == SimpMessageType.SUBSCRIBE) {
             String destination = validateDestination(accessor);
-            String conversationId = destination.substring(conversationPath.length());
+            String conversationId = parseConversationId(destination);
 
             Conversation conversation = conversationQueryPort.findById(conversationId);
 
@@ -54,6 +57,19 @@ public class MessageChannelInterceptor implements ChannelInterceptor {
         }
 
         return destination;
+    }
+
+    private String parseConversationId(String destination) {
+        String conversationId = destination.substring(conversationPath.length());
+        if (conversationId.endsWith(MessageWebSocketEventListener.READ_DESTINATION_SUFFIX)) {
+            conversationId = conversationId.substring(0, conversationId.length() - MessageWebSocketEventListener.READ_DESTINATION_SUFFIX.length());
+        }
+
+        if (conversationId.isBlank() || conversationId.contains(Separators.SLASH_SEPARATOR)) {
+            throw new ConversationNotAllowedException("Subscription denied.");
+        }
+
+        return conversationId;
     }
 
     private User parseAuthUser(StompHeaderAccessor accessor) {
