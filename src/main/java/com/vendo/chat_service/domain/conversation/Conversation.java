@@ -23,15 +23,6 @@ public record Conversation(
 
 ) {
 
-    public static Conversation from(String productId, String sellerId, String buyerId, LastMessage lastMessage) {
-        return Conversation.builder()
-                .productId(productId)
-                .sellerId(sellerId)
-                .buyerId(buyerId)
-                .lastMessage(lastMessage)
-                .build();
-    }
-
     public static Conversation from(String productId, String sellerId, String buyerId) {
         return Conversation.builder()
                 .productId(productId)
