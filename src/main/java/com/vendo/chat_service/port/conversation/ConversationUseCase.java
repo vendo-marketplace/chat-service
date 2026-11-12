@@ -11,6 +11,7 @@ public interface ConversationUseCase {
 
     List<ConversationResponse> findAll();
     ConversationResponse findById(String id);
+    int findUnread();
 
     void markAsRead(String conversationId, String lastReadMessageId);
 

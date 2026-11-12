@@ -11,4 +11,6 @@ public interface ConversationQueryPort {
     Conversation findById(String id);
     List<Conversation> findAll(String userId);
 
+    int countUnreadMessages(String userId);
+
 }

@@ -36,6 +36,7 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+
 public class ConversationService implements ConversationUseCase {
 
     private final AuthUserPort authUserPort;
@@ -80,6 +81,12 @@ public class ConversationService implements ConversationUseCase {
         var conversation = conversationQueryPort.findById(conversationId);
         authUserPort.validateAnyOwner(conversation.buyerId(), conversation.sellerId());
         return toConversationResponse(conversation, new HashMap<>());
+    }
+
+    @Override
+    public int findUnread() {
+        User authUser = authUserPort.getAuthUser();
+        return conversationQueryPort.countUnreadMessages(authUser.id());
     }
 
     @Override

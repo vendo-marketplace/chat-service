@@ -418,6 +418,62 @@ class ConversationControllerIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Nested
+    class FindUnread {
+
+        @Test
+        void returnsUnreadCountForAuthUser() throws Exception {
+            when(conversationQueryPort.countUnreadMessages(BUYER.id())).thenReturn(4);
+
+            mockMvc.perform(get("/conversations/unread").headers(authHeaders(BUYER)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.count").value(4));
+
+            verify(conversationQueryPort).countUnreadMessages(BUYER.id());
+        }
+
+        @Test
+        void returnsZeroWhenNothingIsUnread() throws Exception {
+            when(conversationQueryPort.countUnreadMessages(SELLER.id())).thenReturn(0);
+
+            mockMvc.perform(get("/conversations/unread").headers(authHeaders(SELLER)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.count").value(0));
+        }
+
+        @Test
+        void countsOnlyForRequestingUser() throws Exception {
+            when(conversationQueryPort.countUnreadMessages(SELLER.id())).thenReturn(2);
+
+            mockMvc.perform(get("/conversations/unread").headers(authHeaders(SELLER)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.count").value(2));
+
+            verify(conversationQueryPort).countUnreadMessages(SELLER.id());
+            verify(conversationQueryPort, never()).countUnreadMessages(BUYER.id());
+        }
+
+        @Test
+        void isNotTreatedAsConversationId() throws Exception {
+            when(conversationQueryPort.countUnreadMessages(BUYER.id())).thenReturn(1);
+
+            mockMvc.perform(get("/conversations/unread").headers(authHeaders(BUYER)))
+                    .andExpect(status().isOk());
+
+            verify(conversationQueryPort, never()).findById(any());
+            verifyNoInteractions(userClient);
+        }
+
+        @Test
+        void returnsUnauthorizedWithoutAuthHeaders() throws Exception {
+            mockMvc.perform(get("/conversations/unread"))
+                    .andExpect(status().isUnauthorized());
+
+            verifyNoInteractions(conversationQueryPort);
+        }
+
+    }
+
+    @Nested
     class MarkAsRead {
 
         private static final Instant LAST_READ_CREATED_AT = CREATED_AT.plusSeconds(10);

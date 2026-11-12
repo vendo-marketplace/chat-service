@@ -34,4 +34,9 @@ class JpaConversationQueryAdapter implements ConversationQueryPort {
         return mapper.toConversations(entities);
     }
 
+    @Override
+    public int countUnreadMessages(String userId) {
+        return repository.countUnreadMessages(userId);
+    }
+
 }

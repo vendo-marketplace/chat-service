@@ -1,9 +1,6 @@
 package com.vendo.chat_service.adapter.conversation.in;
 
-import com.vendo.chat_service.adapter.conversation.in.dto.ConversationResponse;
-import com.vendo.chat_service.adapter.conversation.in.dto.ConversationsResponse;
-import com.vendo.chat_service.adapter.conversation.in.dto.CreateConversationRequest;
-import com.vendo.chat_service.adapter.conversation.in.dto.MarkAsReadRequest;
+import com.vendo.chat_service.adapter.conversation.in.dto.*;
 import com.vendo.chat_service.application.conversation.command.ConversationCreatedCommand;
 import com.vendo.chat_service.port.conversation.ConversationUseCase;
 import jakarta.validation.Valid;
@@ -32,6 +29,11 @@ public class ConversationController {
             @PathVariable String conversationId
     ) {
         return useCase.findById(conversationId);
+    }
+
+    @GetMapping("/unread")
+    public UnreadResponse findUnread() {
+        return new UnreadResponse(useCase.findUnread());
     }
 
     @PatchMapping("/{conversationId}/read")

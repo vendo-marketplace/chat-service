@@ -174,6 +174,40 @@ class ConversationServiceTest {
 
     }
 
+    @Nested
+    class FindUnread {
+
+        @Test
+        void returnsUnreadCountForAuthUser() {
+            when(authUserPort.getAuthUser()).thenReturn(BUYER);
+            when(conversationQueryPort.countUnreadMessages(BUYER.id())).thenReturn(3);
+
+            int result = service.findUnread();
+
+            assertThat(result).isEqualTo(3);
+            verify(conversationQueryPort).countUnreadMessages(BUYER.id());
+        }
+
+        @Test
+        void returnsZeroWhenNothingIsUnread() {
+            when(authUserPort.getAuthUser()).thenReturn(SELLER);
+            when(conversationQueryPort.countUnreadMessages(SELLER.id())).thenReturn(0);
+
+            assertThat(service.findUnread()).isZero();
+        }
+
+        @Test
+        void doesNotTouchUsersOrWrites() {
+            when(authUserPort.getAuthUser()).thenReturn(BUYER);
+            when(conversationQueryPort.countUnreadMessages(BUYER.id())).thenReturn(1);
+
+            service.findUnread();
+
+            verifyNoInteractions(userQueryPort, conversationCommandPort, messageCommandPort, productQueryPort);
+        }
+
+    }
+
     private static User user(String id, String fullName) {
         return User.builder().id(id).fullName(fullName).build();
     }
