@@ -1,5 +1,6 @@
 package com.vendo.chat_service.domain.conversation;
 
+import com.vendo.chat_service.domain.message.LastMessage;
 import lombok.Builder;
 
 import java.time.Instant;
@@ -13,7 +14,7 @@ public record Conversation(
         String sellerId,
         String buyerId,
 
-        String lastMessage,
+        LastMessage lastMessage,
 
         ReadState sellerReadState,
         ReadState buyerReadState,
@@ -22,12 +23,20 @@ public record Conversation(
 
 ) {
 
-    public static Conversation from(String productId, String sellerId, String buyerId, String lastMessage) {
+    public static Conversation from(String productId, String sellerId, String buyerId, LastMessage lastMessage) {
         return Conversation.builder()
                 .productId(productId)
                 .sellerId(sellerId)
                 .buyerId(buyerId)
                 .lastMessage(lastMessage)
+                .build();
+    }
+
+    public static Conversation from(String productId, String sellerId, String buyerId) {
+        return Conversation.builder()
+                .productId(productId)
+                .sellerId(sellerId)
+                .buyerId(buyerId)
                 .build();
     }
 

@@ -39,17 +39,10 @@ class MessageControllerIntegrationTest extends AbstractIntegrationTest {
                     .content(body));
         }
 
-        private void stubSavedMessage() {
-            when(messageCommandPort.save(any())).thenAnswer(invocation -> {
-                Message message = invocation.getArgument(0);
-                return new Message("message-id", message.conversationId(), message.senderId(), message.content(), CREATED_AT);
-            });
-        }
-
         @Test
         void savesMessageAndUpdatesLastMessage() throws Exception {
             stubConversation("c1", SELLER, BUYER, "first");
-            stubSavedMessage();
+            stubSavedMessage("message-id");
 
             performSend("c1", "{\"message\": \"Yes, it is available\"}")
                     .andExpect(status().isOk());
@@ -66,7 +59,11 @@ class MessageControllerIntegrationTest extends AbstractIntegrationTest {
             ArgumentCaptor<Conversation> conversationCaptor = ArgumentCaptor.forClass(Conversation.class);
             verify(conversationCommandPort).update(eq("c1"), conversationCaptor.capture());
             assertThat(conversationCaptor.getValue()).satisfies(update -> {
-                assertThat(update.lastMessage()).isEqualTo("Yes, it is available");
+                assertThat(update.lastMessage()).isNotNull();
+                assertThat(update.lastMessage().id()).isEqualTo("message-id");
+                assertThat(update.lastMessage().senderId()).isEqualTo(SELLER.id());
+                assertThat(update.lastMessage().content()).isEqualTo("Yes, it is available");
+                assertThat(update.lastMessage().createdAt()).isNotNull();
                 assertThat(update.sellerId()).isNull();
                 assertThat(update.buyerId()).isNull();
                 assertThat(update.productId()).isNull();
@@ -105,7 +102,7 @@ class MessageControllerIntegrationTest extends AbstractIntegrationTest {
         @Test
         void acceptsMessageWithMaxLength() throws Exception {
             stubConversation("c1", SELLER, BUYER, "first");
-            stubSavedMessage();
+            stubSavedMessage("message-id");
 
             performSend("c1", "{\"message\": \"%s\"}".formatted("a".repeat(4000)))
                     .andExpect(status().isOk());

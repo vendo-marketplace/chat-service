@@ -3,6 +3,7 @@ package com.vendo.chat_service.application.conversation;
 import com.vendo.chat_service.adapter.conversation.in.dto.ConversationResponse;
 import com.vendo.chat_service.adapter.user.in.dto.UserProfileResponse;
 import com.vendo.chat_service.domain.conversation.Conversation;
+import com.vendo.chat_service.domain.message.LastMessage;
 import com.vendo.chat_service.domain.conversation.exception.ConversationNotFoundException;
 import com.vendo.chat_service.domain.user.User;
 import com.vendo.chat_service.domain.user.exception.UserNotOwnerException;
@@ -187,7 +188,7 @@ class ConversationServiceTest {
                 .productId("product-" + id)
                 .sellerId(sellerId)
                 .buyerId(buyerId)
-                .lastMessage("last message " + id)
+                .lastMessage(new LastMessage("m-" + id, sellerId, "last message " + id, Instant.parse("2026-11-10T10:00:00Z")))
                 .createdAt(Instant.parse("2026-11-10T10:00:00Z"))
                 .build();
     }

@@ -4,6 +4,8 @@ import com.vendo.chat_service.adapter.product.out.ProductClient;
 import com.vendo.chat_service.adapter.user.out.UserClient;
 import com.vendo.chat_service.domain.conversation.Conversation;
 import com.vendo.chat_service.domain.conversation.exception.ConversationNotFoundException;
+import com.vendo.chat_service.domain.message.LastMessage;
+import com.vendo.chat_service.domain.message.Message;
 import com.vendo.chat_service.domain.user.User;
 import com.vendo.chat_service.port.conversation.ConversationCommandPort;
 import com.vendo.chat_service.port.conversation.ConversationQueryPort;
@@ -24,6 +26,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import java.time.Instant;
 import java.util.Set;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest
@@ -67,21 +70,34 @@ public abstract class AbstractIntegrationTest {
         return headers;
     }
 
-    protected static Conversation conversation(String id, User seller, User buyer, String lastMessage) {
+    protected static Conversation conversation(String id, User seller, User buyer, String lastMessageContent) {
         return Conversation.builder()
                 .id(id)
                 .productId("product-" + id)
                 .sellerId(seller.id())
                 .buyerId(buyer.id())
-                .lastMessage(lastMessage)
+                .lastMessage(lastMessage(id, seller, lastMessageContent))
                 .createdAt(CREATED_AT)
                 .build();
     }
 
-    protected Conversation stubConversation(String id, User seller, User buyer, String lastMessage) {
-        Conversation conversation = conversation(id, seller, buyer, lastMessage);
+    protected static LastMessage lastMessage(String conversationId, User sender, String content) {
+        if (content == null) {
+            return null;
+        }
+        return new LastMessage("last-" + conversationId, sender.id(), content, CREATED_AT);
+    }
+
+    protected void stubConversation(String id, User seller, User buyer, String lastMessageContent) {
+        Conversation conversation = conversation(id, seller, buyer, lastMessageContent);
         when(conversationQueryPort.findById(id)).thenReturn(conversation);
-        return conversation;
+    }
+
+    protected void stubSavedMessage(String messageId) {
+        when(messageCommandPort.save(any())).thenAnswer(invocation -> {
+            Message message = invocation.getArgument(0);
+            return new Message(messageId, message.conversationId(), message.senderId(), message.content(), CREATED_AT);
+        });
     }
 
     protected void stubMissingConversation(String id) {

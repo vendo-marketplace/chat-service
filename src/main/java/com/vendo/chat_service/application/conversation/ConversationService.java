@@ -189,9 +189,12 @@ public class ConversationService implements ConversationUseCase {
     }
 
     private String saveConversation(String productId, String sellerId, String buyerId, String firstMessage) {
-        Conversation conversation = Conversation.from(productId, sellerId, buyerId, firstMessage);
+        Conversation conversation = Conversation.from(productId, sellerId, buyerId);
         String conversationId = conversationCommandPort.save(conversation);
-        messageCommandPort.save(Message.from(conversationId, buyerId, firstMessage));
+
+        Message message = messageCommandPort.save(Message.from(conversationId, buyerId, firstMessage));
+        conversationCommandPort.update(conversationId, Conversation.builder().lastMessage(message.toLast()).build());
+
         return conversationId;
     }
 

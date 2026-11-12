@@ -75,6 +75,7 @@ class ConversationControllerIntegrationTest extends AbstractIntegrationTest {
             when(productClient.findById(PRODUCT_ID)).thenReturn(new Product(PRODUCT_ID, SELLER.id()));
             when(conversationQueryPort.find(PRODUCT_ID, SELLER.id(), BUYER.id())).thenReturn(Optional.empty());
             when(conversationCommandPort.save(any())).thenReturn("new-conversation-id");
+            stubSavedMessage("first-message-id");
 
             performCreate(body("Hello, is it available?", PRODUCT_ID))
                     .andExpect(status().isOk())
@@ -88,7 +89,7 @@ class ConversationControllerIntegrationTest extends AbstractIntegrationTest {
                 assertThat(conversation.productId()).isEqualTo(PRODUCT_ID);
                 assertThat(conversation.sellerId()).isEqualTo(SELLER.id());
                 assertThat(conversation.buyerId()).isEqualTo(BUYER.id());
-                assertThat(conversation.lastMessage()).isEqualTo("Hello, is it available?");
+                assertThat(conversation.lastMessage()).isNull();
             });
 
             ArgumentCaptor<Message> messageCaptor = ArgumentCaptor.forClass(Message.class);
@@ -98,6 +99,20 @@ class ConversationControllerIntegrationTest extends AbstractIntegrationTest {
                 assertThat(message.senderId()).isEqualTo(BUYER.id());
                 assertThat(message.content()).isEqualTo("Hello, is it available?");
             });
+
+            ArgumentCaptor<Conversation> updateCaptor = ArgumentCaptor.forClass(Conversation.class);
+            verify(conversationCommandPort).update(eq("new-conversation-id"), updateCaptor.capture());
+            assertThat(updateCaptor.getValue().lastMessage()).satisfies(lastMessage -> {
+                assertThat(lastMessage.id()).isEqualTo("first-message-id");
+                assertThat(lastMessage.senderId()).isEqualTo(BUYER.id());
+                assertThat(lastMessage.content()).isEqualTo("Hello, is it available?");
+                assertThat(lastMessage.createdAt()).isNotNull();
+            });
+
+            var order = inOrder(conversationCommandPort, messageCommandPort);
+            order.verify(conversationCommandPort).save(any());
+            order.verify(messageCommandPort).save(any());
+            order.verify(conversationCommandPort).update(eq("new-conversation-id"), any());
         }
 
         @Test
@@ -187,6 +202,7 @@ class ConversationControllerIntegrationTest extends AbstractIntegrationTest {
             when(productClient.findById(PRODUCT_ID)).thenReturn(new Product(PRODUCT_ID, SELLER.id()));
             when(conversationQueryPort.find(PRODUCT_ID, SELLER.id(), BUYER.id())).thenReturn(Optional.empty());
             when(conversationCommandPort.save(any())).thenReturn("new-conversation-id");
+            stubSavedMessage("first-message-id");
 
             performCreate(body("a".repeat(4000), PRODUCT_ID))
                     .andExpect(status().isOk())
@@ -232,7 +248,10 @@ class ConversationControllerIntegrationTest extends AbstractIntegrationTest {
                     .andExpect(jsonPath("$.data", hasSize(1)))
                     .andExpect(jsonPath("$.data[0].id").value("c1"))
                     .andExpect(jsonPath("$.data[0].productId").value("product-c1"))
-                    .andExpect(jsonPath("$.data[0].lastMessage").value("last message"))
+                    .andExpect(jsonPath("$.data[0].lastMessage.id").value("last-c1"))
+                    .andExpect(jsonPath("$.data[0].lastMessage.senderId").value(SELLER.id()))
+                    .andExpect(jsonPath("$.data[0].lastMessage.content").value("last message"))
+                    .andExpect(jsonPath("$.data[0].lastMessage.createdAt").value(CREATED_AT.toString()))
                     .andExpect(jsonPath("$.data[0].createdAt").value(CREATED_AT.toString()))
                     .andExpect(jsonPath("$.data[0].seller.id").value(SELLER.id()))
                     .andExpect(jsonPath("$.data[0].seller.fullName").value(SELLER.fullName()))
@@ -329,7 +348,10 @@ class ConversationControllerIntegrationTest extends AbstractIntegrationTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id").value("c1"))
                     .andExpect(jsonPath("$.productId").value("product-c1"))
-                    .andExpect(jsonPath("$.lastMessage").value("last message"))
+                    .andExpect(jsonPath("$.lastMessage.id").value("last-c1"))
+                    .andExpect(jsonPath("$.lastMessage.senderId").value(SELLER.id()))
+                    .andExpect(jsonPath("$.lastMessage.content").value("last message"))
+                    .andExpect(jsonPath("$.lastMessage.createdAt").value(CREATED_AT.toString()))
                     .andExpect(jsonPath("$.createdAt").value(CREATED_AT.toString()))
                     .andExpect(jsonPath("$.seller.id").value(SELLER.id()))
                     .andExpect(jsonPath("$.seller.fullName").value(SELLER.fullName()))

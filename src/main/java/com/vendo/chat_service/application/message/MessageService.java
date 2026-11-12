@@ -36,7 +36,8 @@ public class MessageService implements MessageUseCase {
     public void send(String conversationId, String content) {
         var user = validateConversationOwner(conversationId);
         Message message = messageCommandPort.save(Message.from(conversationId, user.id(), content));
-        conversationCommandPort.update(conversationId, Conversation.builder().lastMessage(content).build());
+
+        conversationCommandPort.update(conversationId, Conversation.builder().lastMessage(message.toLast()).build());
         eventPublisher.publishEvent(new MessageCreatedEvent(
                 message.id(),
                 conversationId,

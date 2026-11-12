@@ -2,6 +2,7 @@ package com.vendo.chat_service.adapter.conversation.in.dto;
 
 import com.vendo.chat_service.adapter.user.in.dto.UserProfileResponse;
 import com.vendo.chat_service.domain.conversation.ReadState;
+import com.vendo.chat_service.domain.message.LastMessage;
 import lombok.Builder;
 
 import java.time.Instant;
@@ -16,7 +17,7 @@ public record ConversationResponse(
         UserProfileResponse seller,
         UserProfileResponse buyer,
 
-        String lastMessage,
+        LastMessage lastMessage,
 
         Map<String, ReadState> readStates,
 

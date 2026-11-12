@@ -1,6 +1,7 @@
 package com.vendo.chat_service.adapter.conversation.out.persistence;
 
 import com.vendo.chat_service.adapter.message.out.persistence.JpaMessage;
+import com.vendo.chat_service.adapter.message.out.persistence.embedded.JpaLastMessage;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -29,8 +30,14 @@ public class JpaConversation {
     private String sellerId;
     private String buyerId;
 
-    @Column(length = 4000)
-    private String lastMessage;
+    @Embedded
+    @AttributeOverrides({
+            @AttributeOverride(name = "id", column = @Column(name = "last_message_id")),
+            @AttributeOverride(name = "senderId", column = @Column(name = "last_message_sender_id")),
+            @AttributeOverride(name = "content", column = @Column(name = "last_message_content", length = 4000)),
+            @AttributeOverride(name = "createdAt", column = @Column(name = "last_message_created_at"))
+    })
+    private JpaLastMessage lastMessage;
 
     @Embedded
     @AttributeOverrides({
